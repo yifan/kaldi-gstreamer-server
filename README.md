@@ -40,6 +40,8 @@ Use ws4py 0.3.2 instead. To install ws4py 0.3.2 using `pip`, run:
 
     pip install ws4py==0.3.2
 
+In addition, you need Python 2.x bindings for gobject-introspection libraries, provided by the `python-gi`
+package on Debian and Ubuntu.
 
 #### Kaldi
 
