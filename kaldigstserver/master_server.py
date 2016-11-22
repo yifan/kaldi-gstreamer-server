@@ -336,13 +336,13 @@ def main():
       
     tornado.options.parse_command_line()
     app = Application()
-    ssl_options = None
+    app.listen(options.port)
     if options.certfile and options.keyfile:
         ssl_options = {
           "certfile": options.certfile,
           "keyfile": options.keyfile,
         }
-    app.listen(options.port, ssl_options=ssl_options)
+        app.listen(options.port+1, ssl_options=ssl_options)
 
     tornado.ioloop.IOLoop.instance().start()
 
