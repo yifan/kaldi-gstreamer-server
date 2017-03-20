@@ -194,13 +194,17 @@ class DecoderPipeline2(object):
         # reset adaptation state
         self.set_adaptation_state("")
 
+    def end_segment(self):
+        tag = Gst.Event.new_tag(Gst.TagList.new_empty())
+        pad = self.asr.get_static_pad("sink")
+        pad.send_event(tag)
+
     def process_data(self, data):
         logger.debug('%s: Pushing buffer of size %d to pipeline' % (self.request_id, len(data)))
         buf = Gst.Buffer.new_allocate(None, len(data), None)
         buf.fill(0, data)
         self.appsrc.emit("push-buffer", buf)
         logger.debug('%s: Pushing buffer done' % self.request_id)
-
 
     def end_request(self):
         logger.info("%s: Pushing EOS to pipeline" % self.request_id)
