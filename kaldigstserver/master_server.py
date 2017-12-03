@@ -247,6 +247,7 @@ class WorkerSocketHandler(tornado.websocket.WebSocketHandler):
         return True
 
     def open(self):
+        self.set_nodelay(True)
         self.client_socket = None
         self.application.available_workers.add(self)
         logging.info("New worker available " + self.__str__())
