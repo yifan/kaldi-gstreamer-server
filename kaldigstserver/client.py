@@ -59,6 +59,7 @@ class MyClient(WebSocketClient):
                     self.send_data(block)
             print >> sys.stderr, "Audio sent, now sending EOS"
             self.send("EOS")
+            self.data_sent_time = time.time()
 
         t = threading.Thread(target=send_data_to_ws)
         t.start()
@@ -126,6 +127,7 @@ def main():
     print result.encode('utf-8')
 
     print 'TAT:', turnaround_time
+    print 'Latency:', time.time() - ws.data_sent_time
 
 if __name__ == "__main__":
     main()
