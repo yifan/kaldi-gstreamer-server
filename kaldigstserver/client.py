@@ -117,11 +117,15 @@ def main():
 
 
 
+    start_time = time.time()
     ws = MyClient(args.audiofile, args.uri + '?%s' % (urllib.urlencode([("content-type", content_type)])), byterate=args.rate,
                   save_adaptation_state_filename=args.save_adaptation_state, send_adaptation_state_filename=args.send_adaptation_state)
     ws.connect()
     result = ws.get_full_hyp()
+    turnaround_time = time.time() - start_time
     print result.encode('utf-8')
+
+    print 'TAT:', turnaround_time
 
 if __name__ == "__main__":
     main()
