@@ -262,6 +262,7 @@ class WorkerSocketHandler(tornado.websocket.WebSocketHandler):
 
     def on_message(self, message):
         assert self.client_socket is not None
+        logging.info("receiving message from worker: %s" % message)
         event = json.loads(message)
         self.client_socket.send_event(event)
 
@@ -270,6 +271,10 @@ class WorkerSocketHandler(tornado.websocket.WebSocketHandler):
 
 
 class DecoderSocketHandler(tornado.websocket.WebSocketHandler):
+    def __init__(self, application, request, **kwargs):
+        tornado.websocket.WebSocketHandler.__init__(self, application, request, **kwargs)
+        self.start_time = None
+
     # needed for Tornado 4.0
     def check_origin(self, origin):
         return True
@@ -289,6 +294,7 @@ class DecoderSocketHandler(tornado.websocket.WebSocketHandler):
         self.user_id = self.get_argument("user-id", "none", True)
         self.content_id = self.get_argument("content-id", "none", True)
         self.worker = None
+        self.start_time = int(time.time())
         try:
             self.worker = self.application.available_workers.pop()
             self.application.send_status_update()
@@ -307,7 +313,7 @@ class DecoderSocketHandler(tornado.websocket.WebSocketHandler):
             self.close()
 
     def on_connection_close(self):
-        logging.info("%s: Handling on_connection_close()" % self.id)
+        logging.info("%s: Handling on_connection_close() : start time %d end time %d diff %d" % (self.id, self.start_time, int(time.time()), int(time.time()) - self.start_time))
         self.application.num_requests_processed += 1
         self.application.send_status_update()
         if self.worker:
@@ -323,6 +329,7 @@ class DecoderSocketHandler(tornado.websocket.WebSocketHandler):
         logging.info("%s: Forwarding client message (%s) of length %d to worker" % (self.id, type(message), len(message)))
         if isinstance(message, unicode):
             self.worker.write_message(message, binary=False)
+            logging.info("%s: Forwarding client message (%s) of length %d to worker: %s" % (self.id, type(message), len(message), message))
         else:
             self.worker.write_message(message, binary=True)
 
