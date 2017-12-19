@@ -127,7 +127,7 @@ def main():
     print result.encode('utf-8')
 
     print 'TAT:', turnaround_time
-    pritn 'Latency:', time.time() - ws.data_sent_time
+    print 'Latency:', time.time() - ws.data_sent_time
 
 if __name__ == "__main__":
     main()
