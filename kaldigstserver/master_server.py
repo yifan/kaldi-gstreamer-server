@@ -288,6 +288,7 @@ class DecoderSocketHandler(tornado.websocket.WebSocketHandler):
         self.write_message(json.dumps(event))
 
     def open(self):
+        self.set_nodelay(True)
         self.id = str(uuid.uuid4())
         logging.info("%s: OPEN" % (self.id))
         logging.info("%s: Request arguments: %s" % (self.id, " ".join(["%s=\"%s\"" % (a, self.get_argument(a)) for a in self.request.arguments])))
