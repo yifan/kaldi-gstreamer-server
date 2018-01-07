@@ -13,6 +13,7 @@ import codecs
 import os.path
 import uuid
 import time
+import collections
 import threading
 import functools
 from Queue import Queue
@@ -47,12 +48,12 @@ class Application(tornado.web.Application):
             (r"/client/static/(.*)", tornado.web.StaticFileHandler, {'path': settings["static_path"]}),
         ]
         tornado.web.Application.__init__(self, handlers, **settings)
-        self.available_workers = set()
+        self.available_workers = collections.defaultdict(lambda: set())
         self.status_listeners = set()
         self.num_requests_processed = 0
 
     def send_status_update_single(self, ws):
-        status = dict(num_workers_available=len(self.available_workers), num_requests_processed=self.num_requests_processed)
+        status = dict(num_workers_available=sum([len(workers) for lang,workers in self.available_workers.iteritems()]), num_requests_processed=self.num_requests_processed)
         ws.write_message(json.dumps(status))
 
     def send_status_update(self):
@@ -118,12 +119,13 @@ class HttpChunkedRecognizeHandler(tornado.web.RequestHandler):
         self.final_result_queue = Queue()
         self.user_id = self.request.headers.get("device-id", "none")
         self.content_id = self.request.headers.get("content-id", "none")
-        logging.info("%s: OPEN: user='%s', content='%s'" % (self.id, self.user_id, self.content_id))
+        self.lang = self.get_argument("lang", "none")
+        logging.info("%s: OPEN: user='%s', content='%s', lang='%s'" % (self.id, self.user_id, self.content_id, self.lang))
         self.worker = None
         self.error_status = 0
         self.error_message = None
         try:
-            self.worker = self.application.available_workers.pop()
+            self.worker = self.application.available_workers[self.lang].pop()
             self.application.send_status_update()
             logging.info("%s: Using worker %s" % (self.id, self.__str__()))
             self.worker.set_client_socket(self)
@@ -133,7 +135,7 @@ class HttpChunkedRecognizeHandler(tornado.web.RequestHandler):
                 content_type = content_type_to_caps(content_type)
                 logging.info("%s: Using content type: %s" % (self.id, content_type))
 
-            self.worker.write_message(json.dumps(dict(id=self.id, content_type=content_type, user_id=self.user_id, content_id=self.content_id)))
+            self.worker.write_message(json.dumps(dict(id=self.id, content_type=content_type, user_id=self.user_id, content_id=self.content_id, lang=self.lang)))
         except KeyError:
             logging.warn("%s: No worker available for client request" % self.id)
             self.set_status(503)
@@ -249,13 +251,14 @@ class WorkerSocketHandler(tornado.websocket.WebSocketHandler):
     def open(self):
         self.set_nodelay(True)
         self.client_socket = None
-        self.application.available_workers.add(self)
+        self.lang = self.get_argument("lang", "none")
+        self.application.available_workers[self.lang].add(self)
         logging.info("New worker available " + self.__str__())
         self.application.send_status_update()
 
     def on_close(self):
         logging.info("Worker " + self.__str__() + " leaving")
-        self.application.available_workers.discard(self)
+        self.application.available_workers[self.lang].discard(self)
         if self.client_socket:
             self.client_socket.close()
         self.application.send_status_update()
@@ -294,9 +297,10 @@ class DecoderSocketHandler(tornado.websocket.WebSocketHandler):
         logging.info("%s: Request arguments: %s" % (self.id, " ".join(["%s=\"%s\"" % (a, self.get_argument(a)) for a in self.request.arguments])))
         self.user_id = self.get_argument("user-id", "none", True)
         self.content_id = self.get_argument("content-id", "none", True)
+        self.lang = self.get_argument("lang", "ar")
         self.worker = None
         try:
-            self.worker = self.application.available_workers.pop()
+            self.worker = self.application.available_workers[self.lang].pop()
             self.application.send_status_update()
             logging.info("%s: Using worker %s" % (self.id, self.__str__()))
             self.worker.set_client_socket(self)
