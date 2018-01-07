@@ -3,6 +3,7 @@ __author__ = 'tanel'
 import logging
 import logging.config
 import time
+import struct
 import thread
 import argparse
 from subprocess import Popen, PIPE
@@ -112,7 +113,9 @@ class ServerWebsocket(WebSocketClient):
         else:
             if self.state != self.STATE_CANCELLING and self.state != self.STATE_EOS_RECEIVED and self.state != self.STATE_FINISHED:
                 if isinstance(m, ws4py.messaging.BinaryMessage):
-                    self.decoder_pipeline.process_data(m.data)
+                    latency = time.time() - struct.unpack('>I', m.data[:4])[0]
+                    logger.info("%s: received message with latency %d" % (self.request_id, latency))
+                    self.decoder_pipeline.process_data(m.data[4:])
                     self.state = self.STATE_PROCESSING
                 elif isinstance(m, ws4py.messaging.TextMessage):
                     props = json.loads(str(m))
