@@ -1,4 +1,4 @@
 tornado
 ws4py==0.3.2
-yaml
+pyyaml
 json
