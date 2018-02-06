@@ -336,7 +336,10 @@ class DecoderSocketHandler(tornado.websocket.WebSocketHandler):
             self.worker.write_message(message, binary=False)
             logging.info("%s: Forwarding client message (%s) of length %d to worker: %s" % (self.id, type(message), len(message), message))
         else:
-            self.worker.write_message(message, binary=True)
+            if len(message) > 0:
+                self.worker.write_message(message, binary=True)
+            else:
+                logging.info("%s: skipped due to message is empty" % self.id)
 
 
 def main():
