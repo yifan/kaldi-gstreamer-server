@@ -54,6 +54,8 @@ class Application(tornado.web.Application):
 
     def send_status_update_single(self, ws):
         status = dict(num_workers_available=sum([len(workers) for lang,workers in self.available_workers.iteritems()]), num_requests_processed=self.num_requests_processed)
+        for lang, workers in self.available_workers.iteritems():
+          status[lang] = len(workers)
         ws.write_message(json.dumps(status))
 
     def send_status_update(self):
