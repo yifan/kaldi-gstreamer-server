@@ -254,6 +254,7 @@ class WorkerSocketHandler(tornado.websocket.WebSocketHandler):
         self.set_nodelay(True)
         self.client_socket = None
         self.lang = self.get_argument("lang", "none")
+        self.user_id = self.get_argument("user_id", None)
         self.application.available_workers[self.lang].add(self)
         logging.info("New worker available " + self.__str__())
         self.application.send_status_update()
@@ -269,6 +270,11 @@ class WorkerSocketHandler(tornado.websocket.WebSocketHandler):
         assert self.client_socket is not None
         logging.info("receiving message from worker: %s" % message)
         event = json.loads(message)
+        if 'adaptation_state' in event:
+          if self.user_id:
+            with open("/var/spool/asrusers/%s.adaptation.json" % self.user_id, 'w') as f:
+              f.write(message)
+            
         self.client_socket.send_event(event)
 
     def set_client_socket(self, client_socket):
@@ -297,8 +303,8 @@ class DecoderSocketHandler(tornado.websocket.WebSocketHandler):
         self.id = str(uuid.uuid4())
         logging.info("%s: OPEN" % (self.id))
         logging.info("%s: Request arguments: %s" % (self.id, " ".join(["%s=\"%s\"" % (a, self.get_argument(a)) for a in self.request.arguments])))
-        self.user_id = self.get_argument("user-id", "none", True)
-        self.content_id = self.get_argument("content-id", "none", True)
+        self.user_id = self.get_argument("user-id", None, True)
+        self.content_id = self.get_argument("content-id", None, True)
         self.lang = self.get_argument("lang", "ar")
         self.worker = None
         try:
@@ -312,6 +318,12 @@ class DecoderSocketHandler(tornado.websocket.WebSocketHandler):
                 logging.info("%s: Using content type: %s" % (self.id, content_type))
 
             self.worker.write_message(json.dumps(dict(id=self.id, content_type=content_type, user_id=self.user_id, content_id=self.content_id)))
+            if self.user_id:
+              adaptation_filename = "/var/spool/asrusers/%s.adaptation.json" % self.user_id
+              if os.path.exists(adaptation_filename):
+                logging.info("%s: Using saved adaptation state for user %s" % (self.id, self.user_id))
+                with open(adaptation_filename, 'r') as f:
+                  self.worker.write_message(f.read())
         except KeyError:
             logging.warn("%s: No worker available for client request" % self.id)
             event = dict(status=common.STATUS_NOT_AVAILABLE, message="No decoder available, try again later")
