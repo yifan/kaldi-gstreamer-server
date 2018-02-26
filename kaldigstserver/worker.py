@@ -59,6 +59,8 @@ class ServerWebsocket(WebSocketClient):
         self.state = self.STATE_CREATED
         self.last_decoder_message = time.time()
         self.request_id = "<undefined>"
+        self.user_id = None
+        self.content_id = None
         self.timeout_decoder = 5
         self.num_segments = 0
         self.last_partial_result = ""
@@ -91,8 +93,10 @@ class ServerWebsocket(WebSocketClient):
             props = json.loads(str(m))
             content_type = props['content_type']
             self.request_id = props['id']
+            self.user_id = props['user_id']
+            self.content_id = props['content_id']
             self.num_segments = 0
-            self.decoder_pipeline.init_request(self.request_id, content_type)
+            self.decoder_pipeline.init_request(self.request_id, content_type, self.user_id, self.content_id)
             self.last_decoder_message = time.time()
             thread.start_new_thread(self.guard_timeout, ())
             logger.info("%s: Started timeout guard" % self.request_id)

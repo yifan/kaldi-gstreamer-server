@@ -164,7 +164,7 @@ class DecoderPipeline2(object):
         self.request_id = "<undefined>"
 
 
-    def init_request(self, id, caps_str):
+    def init_request(self, id, caps_str, user_id=None, content_id=None):
         self.request_id = id
         logger.info("%s: Initializing request" % (self.request_id))
         if caps_str and len(caps_str) > 0:
@@ -181,7 +181,10 @@ class DecoderPipeline2(object):
         if self.outdir:
             self.pipeline.set_state(Gst.State.PAUSED)
             self.filesink.set_state(Gst.State.NULL)
-            self.filesink.set_property('location', "%s/%s.raw" % (self.outdir, id))
+            if user_id and content_id:
+              self.filesink.set_property('location', "%s/%s.raw" % (self.outdir, id))
+            else:
+              self.filesink.set_property('location', "%s/%s-%s-%s.raw" % (self.outdir, id, user_id, content_id))
             self.filesink.set_state(Gst.State.PLAYING)
 
         #self.filesink.set_state(Gst.State.PLAYING)        
